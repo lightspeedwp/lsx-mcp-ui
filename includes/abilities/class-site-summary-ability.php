@@ -25,7 +25,7 @@ class LSX_MCP_UI_Ability_Site_Summary {
 			'meta'        => array( 'mcp' => array( 'public' => false ) ),
 			'input_schema' => array(
 				'type'       => 'object',
-				'properties' => array(),
+				'properties' => new stdClass(),
 			),
 			'output_schema' => array(
 				'type'       => 'object',
