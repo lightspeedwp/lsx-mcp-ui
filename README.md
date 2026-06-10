@@ -17,23 +17,35 @@ A WordPress plugin that does two things:
 
 ## Quick Start — Local Studio (STDIO)
 
-The recommended approach for local WordPress Studio sites.
+The recommended approach for local WordPress Studio sites. No Application Password or public endpoint required.
 
 1. Install and activate **WordPress MCP Adapter** on the local site.
 2. Install and activate this plugin.
-3. Add to `wp-config.php`:
+3. Ensure `wp-config.php` contains:
 
 ```php
 define( 'WP_ENVIRONMENT_TYPE', 'local' );
 define( 'LSX_MCP_ENABLED', true );
 ```
 
-4. Add to `.vscode/mcp.json` or `.mcp.json`:
+4. Add both servers to your MCP client config.
+
+**VS Code** — `.vscode/mcp.json`:
 
 ```json
 {
-  "mcpServers": {
-    "wordpress-local-testing": {
+  "servers": {
+    "wordpress-local-default": {
+      "command": "wp",
+      "args": [
+        "--path=/Users/YOUR_USER/Studio/YOUR_SITE",
+        "mcp-adapter",
+        "serve",
+        "--server=mcp-adapter-default-server",
+        "--user=admin"
+      ]
+    },
+    "wordpress-local-lightspeed": {
       "command": "wp",
       "args": [
         "--path=/Users/YOUR_USER/Studio/YOUR_SITE",
@@ -47,7 +59,36 @@ define( 'LSX_MCP_ENABLED', true );
 }
 ```
 
-5. Replace the path and username.
+**Claude Code** — `.mcp.json` at project root (or `~/.claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "wordpress-local-default": {
+      "command": "wp",
+      "args": [
+        "--path=/Users/YOUR_USER/Studio/YOUR_SITE",
+        "mcp-adapter",
+        "serve",
+        "--server=mcp-adapter-default-server",
+        "--user=admin"
+      ]
+    },
+    "wordpress-local-lightspeed": {
+      "command": "wp",
+      "args": [
+        "--path=/Users/YOUR_USER/Studio/YOUR_SITE",
+        "mcp-adapter",
+        "serve",
+        "--server=lightspeed-testing-mcp-server",
+        "--user=admin"
+      ]
+    }
+  }
+}
+```
+
+Replace `/Users/YOUR_USER/Studio/YOUR_SITE` with the absolute path to your WordPress root (the folder containing `wp-config.php`) and `admin` with a real WordPress username.
 
 → See [docs/setup-local-studio.md](docs/setup-local-studio.md) for full instructions and troubleshooting.
 
@@ -55,31 +96,75 @@ define( 'LSX_MCP_ENABLED', true );
 
 ## Quick Start — .lightspeedwp.dev (HTTP)
 
-For shared LightSpeed development sites accessible over HTTPS. No `wp-config.php` editing required on `.lightspeedwp.dev` sites.
+For shared LightSpeed development sites accessible over HTTPS. Uses `mcp-remote` as a stdio-to-HTTP bridge — required for MCP Adapter v0.5.0+ Streamable HTTP transport. Do **not** use `@automattic/mcp-wordpress-remote`; it uses the old transport and returns an empty tool list.
 
 1. Install and activate **WordPress MCP Adapter** on the dev site.
 2. Install and activate this plugin.
-3. Go to **Tools → LightSpeed MCP → Settings**, enable **Enable MCP for this site** and **Application Password compatibility**, then save.
-   - Alternatively, add to `wp-config.php`: `define( 'LSX_MCP_ENABLED', true ); define( 'LSX_MCP_ENABLE_APPLICATION_PASSWORDS', true );`
-4. Create an Application Password: **Users → Profile → Application Passwords**.
-5. Add to `.vscode/mcp.json` or `.mcp.json`:
+3. Go to **Tools → LightSpeed MCP → Settings**, enable **Enable MCP for this site** and **Application Password compatibility**, then save. No `wp-config.php` editing needed on `.lightspeedwp.dev` sites.
+4. Create an Application Password: **Users → Profile → Application Passwords** — copy it, it is shown only once.
+5. Generate your Base64 auth token in a terminal:
+
+```bash
+echo -n "mcp-dev-agent:your-app-password" | base64
+```
+
+6. Add both servers to your MCP client config, substituting the Base64 value from step 5.
+
+**Claude Code** — `.mcp.json` at project root:
 
 ```json
 {
   "mcpServers": {
-    "wordpress-dev-testing": {
+    "wordpress-dev-default": {
       "command": "npx",
-      "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
-      "env": {
-        "WP_API_URL": "https://site-name.lightspeedwp.dev/wp-json/lightspeed-testing-mcp-server/mcp",
-        "WP_API_USERNAME": "mcp-dev-agent",
-        "WP_API_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx",
-        "OAUTH_ENABLED": "false"
-      }
+      "args": [
+        "mcp-remote",
+        "https://site-name.lightspeedwp.dev/wp-json/mcp/mcp-adapter-default-server",
+        "--header",
+        "Authorization:Basic BASE64_MCP_DEV_AGENT_COLON_APP_PASSWORD"
+      ]
+    },
+    "wordpress-dev-lightspeed": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://site-name.lightspeedwp.dev/wp-json/lightspeed-testing-mcp-server/mcp",
+        "--header",
+        "Authorization:Basic BASE64_MCP_DEV_AGENT_COLON_APP_PASSWORD"
+      ]
     }
   }
 }
 ```
+
+**VS Code** — `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "wordpress-dev-default": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://site-name.lightspeedwp.dev/wp-json/mcp/mcp-adapter-default-server",
+        "--header",
+        "Authorization:Basic BASE64_MCP_DEV_AGENT_COLON_APP_PASSWORD"
+      ]
+    },
+    "wordpress-dev-lightspeed": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://site-name.lightspeedwp.dev/wp-json/lightspeed-testing-mcp-server/mcp",
+        "--header",
+        "Authorization:Basic BASE64_MCP_DEV_AGENT_COLON_APP_PASSWORD"
+      ]
+    }
+  }
+}
+```
+
+Replace `site-name.lightspeedwp.dev`, `mcp-dev-agent`, and `BASE64_MCP_DEV_AGENT_COLON_APP_PASSWORD` with your actual values. Do not commit credentials to version control.
 
 → See [docs/setup-development-site.md](docs/setup-development-site.md) for full instructions and troubleshooting.
 
